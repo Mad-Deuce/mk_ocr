@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Electron</title>
+  <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+
+  <link href="./assets/main.css" type="text/css" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="panel">
+    <div class="value" id="value">—</div>
+    <div class="meta" id="meta">Arial Bold 24 · Template matching</div>
+  </div>
+  <script type="module" src="./src/renderer.ts"></script>
+  <!-- <script src="./src/renderer.ts"></script> -->
+</body>
+
+</html>

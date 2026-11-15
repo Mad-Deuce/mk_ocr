@@ -1,0 +1,39 @@
+function init(): void {
+  window.addEventListener('DOMContentLoaded', () => {
+    console.log('[RENDERER] DOM loaded')
+    console.log('[RENDERER] window.api:', window.api)
+
+    doAThing()
+  })
+}
+
+function doAThing(): void {
+  const value: HTMLElement | null = document.getElementById('value')
+  const meta: HTMLElement | null = document.getElementById('meta')
+
+  window.api.onResult((data) => {
+    console.log('[RENDERER] OCR result:', data)
+
+    if (value) {
+      value.textContent = data.text
+    }
+
+    if (meta) {
+      meta.textContent = `Arial Bold 24 · ${data.confidence}% · ${data.digits} digit(s)`
+    }
+  })
+
+  window.api.onError((message) => {
+    console.error('[RENDERER] OCR error:', message)
+
+    if (value) {
+      value.textContent = '!'
+    }
+
+    if (meta) {
+      meta.textContent = String(message).slice(0, 48)
+    }
+  })
+}
+
+init()
