@@ -1,10 +1,37 @@
 import { createCanvas } from '@napi-rs/canvas'
+import { FONT, GLYPH_H, GLYPH_W } from './config'
+import { Box, BoxWithPixels, Digit, RecognizeResult, Template } from './types'
 
-const GLYPH_W = 18
-const GLYPH_H = 26
-const FONT = 'bold 24px Arial'
+const templates = renderTemplates()
 
-function otsuThreshold(gray): number {
+export function recognize(rgba: Uint8Array, width: number, height: number): RecognizeResult {
+  const gray = grayscale(rgba)
+  const threshold = otsuThreshold(gray)
+  const mask = new Uint8Array(gray.length)
+  for (let i = 0; i < gray.length; i++) mask[i] = gray[i] < threshold ? 1 : 0
+  const components = findComponents(mask, width, height)
+  const digits: Digit[] = []
+  for (const box of components) {
+    const glyph = resizeMask(mask, width, height, box)
+    let bestDigit = '',
+      bestScore = 0
+    for (const [digit, template] of templates) {
+      const score = tolerantScore(glyph, template)
+      if (score > bestScore) {
+        bestScore = score
+        bestDigit = digit
+      }
+    }
+    if (bestScore >= 0.48)
+      digits.push({ digit: bestDigit, score: bestScore, x: box.x, y: box.y, w: box.w, h: box.h })
+  }
+  const text = digits.map((d) => d.digit).join('')
+  const confidence = digits.length ? digits.reduce((sum, d) => sum + d.score, 0) / digits.length : 0
+
+  return { text, confidence, threshold, count: digits.length, boxes: digits }
+}
+
+function otsuThreshold(gray: Uint8Array): number {
   const hist = new Uint32Array(256)
   for (let i = 0; i < gray.length; i++) hist[gray[i]]++
   const total = gray.length
@@ -38,9 +65,6 @@ function grayscale(rgba: Uint8Array): Uint8Array {
   }
   return gray
 }
-
-type Box = { x: number; y: number; w: number; h: number }
-type BoxWithPixels = Box & { pixels: number }
 
 function findComponents(mask: Uint8Array, width: number, height: number): BoxWithPixels[] {
   const seen = new Uint8Array(mask.length)
@@ -114,8 +138,6 @@ function resizeMask(
   }
   return out
 }
-
-type Template = { mask: Uint8Array; minX: number; minY: number; box: Box }
 
 function renderTemplates(): Map<string, Template> {
   const templates = new Map()
@@ -198,42 +220,4 @@ function tolerantScore(candidate: Uint8Array, template: Template): number {
   const res = (2 * precision * recall) / (precision + recall || 1)
 
   return res
-}
-
-const templates = renderTemplates()
-
-type Digit = { digit: string; score: number } & Box
-type RecognizeResult = {
-  text: string
-  confidence: number
-  threshold: number
-  count: number
-  boxes: Digit[]
-}
-
-export function recognize(rgba: Uint8Array, width: number, height: number): RecognizeResult {
-  const gray = grayscale(rgba)
-  const threshold = otsuThreshold(gray)
-  const mask = new Uint8Array(gray.length)
-  for (let i = 0; i < gray.length; i++) mask[i] = gray[i] < threshold ? 1 : 0
-  const components = findComponents(mask, width, height)
-  const digits: Digit[] = []
-  for (const box of components) {
-    const glyph = resizeMask(mask, width, height, box)
-    let bestDigit = '',
-      bestScore = 0
-    for (const [digit, template] of templates) {
-      const score = tolerantScore(glyph, template)
-      if (score > bestScore) {
-        bestScore = score
-        bestDigit = digit
-      }
-    }
-    if (bestScore >= 0.48)
-      digits.push({ digit: bestDigit, score: bestScore, x: box.x, y: box.y, w: box.w, h: box.h })
-  }
-  const text = digits.map((d) => d.digit).join('')
-  const confidence = digits.length ? digits.reduce((sum, d) => sum + d.score, 0) / digits.length : 0
-
-  return { text, confidence, threshold, count: digits.length, boxes: digits }
 }

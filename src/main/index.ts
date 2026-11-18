@@ -1,11 +1,17 @@
 import { app, BrowserWindow, globalShortcut, screen } from 'electron'
 import { Monitor } from 'node-screenshots'
-import fs from 'node:fs'
 import path from 'path'
-import { recognize } from './recognizer'
+import {
+  INTERVAL_MS,
+  OVERLAY_HEIGHT,
+  OVERLAY_WIDTH,
+  SCAN_REGION_HEIGHT,
+  SCAN_REGION_WIDTH
+} from './config'
+import { logOCR } from './services/log/log.service'
+import { recognize } from './services/recognize/recognize.service'
+import type { Box } from './services/recognize/types'
 
-const REGION = 50
-const INTERVAL_MS = 300 // ~3.3 checks/sec
 let overlay: BrowserWindow
 let busy = false
 let lastText = ''
@@ -16,13 +22,9 @@ let lastRecognizedText = ''
 function createOverlay(): void {
   const preloadPath = path.join(__dirname, '../preload/index.js')
 
-  console.log('[MAIN] __dirname:', __dirname)
-  console.log('[MAIN] preloadPath:', preloadPath)
-  console.log('[MAIN] preload exists:', fs.existsSync(preloadPath))
-
   overlay = new BrowserWindow({
-    width: 190,
-    height: 54,
+    width: OVERLAY_WIDTH,
+    height: OVERLAY_HEIGHT,
     show: true,
     frame: false,
     transparent: true,
@@ -48,58 +50,42 @@ function createOverlay(): void {
     console.log('[OVERLAY] Renderer loaded')
   })
 
-  // overlay.webContents.on('console-message', (_event, details) => {
-  //   console.log('[OVERLAY CONSOLE]', details.message)
-  // })
-
   overlay.webContents.openDevTools({ mode: 'detach' })
   overlay.setAlwaysOnTop(true, 'screen-saver')
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   overlay.setIgnoreMouseEvents(true, { forward: true })
   overlay.loadFile(path.join(__dirname, '../renderer/index.html'))
-
-  // console.log('Preload path:', overlay.webContents.session)
-  // console.log('WebPreferences:', overlay.webContents.getLastWebPreferences())
 }
-
-type Box = { x: number; y: number; width: number; height: number }
 
 function intersect(a: Box, b: Box): Box | null {
   const left = Math.max(a.x, b.x),
     top = Math.max(a.y, b.y)
-  const right = Math.min(a.x + a.width, b.x + b.width),
-    bottom = Math.min(a.y + a.height, b.y + b.height)
-  return right > left && bottom > top
-    ? { x: left, y: top, width: right - left, height: bottom - top }
-    : null
+  const right = Math.min(a.x + a.w, b.x + b.w),
+    bottom = Math.min(a.y + a.h, b.y + b.h)
+  return right > left && bottom > top ? { x: left, y: top, w: right - left, h: bottom - top } : null
 }
 
-async function captureVirtualRegion(
-  left: number,
-  top: number,
-  width: number,
-  height: number
-): Promise<Buffer<ArrayBuffer>> {
+async function captureVirtualRegion(box: Box): Promise<Buffer<ArrayBuffer>> {
   // White padding is appropriate for the configured light-background mode.
-  const out = Buffer.alloc(width * height * 4, 255)
+  const out = Buffer.alloc(box.w * box.h * 4, 255)
   const monitors = Monitor.all()
   for (const monitor of monitors) {
     const bounds = {
       x: monitor.x(),
       y: monitor.y(),
-      width: monitor.width(),
-      height: monitor.height()
+      w: monitor.width(),
+      h: monitor.height()
     }
-    const part = intersect({ x: left, y: top, width, height }, bounds)
+    const part = intersect({ x: box.x, y: box.y, w: box.w, h: box.h }, bounds)
     if (!part) continue
     const image = monitor.captureImageSync()
     const raw = image.toRawSync(true) // copyOutputData=true is recommended in Electron.
     const localX = part.x - bounds.x,
       localY = part.y - bounds.y
-    for (let row = 0; row < part.height; row++) {
-      const srcStart = ((localY + row) * bounds.width + localX) * 4
-      const dstStart = ((part.y - top + row) * width + (part.x - left)) * 4
-      raw.copy(out, dstStart, srcStart, srcStart + part.width * 4)
+    for (let row = 0; row < part.h; row++) {
+      const srcStart = ((localY + row) * bounds.w + localX) * 4
+      const dstStart = ((part.y - box.y + row) * box.w + (part.x - box.x)) * 4
+      raw.copy(out, dstStart, srcStart, srcStart + part.w * 4)
     }
   }
   return out
@@ -108,11 +94,11 @@ async function captureVirtualRegion(
 function placeOverlay(cursorX: number, cursorY: number): void {
   const display = screen.getDisplayNearestPoint({ x: cursorX, y: cursorY })
   const b = display.bounds
-  const roiLeft = cursorX - REGION / 2
-  let x = roiLeft + REGION + 12
-  if (x + 190 > b.x + b.width) x = roiLeft - 202
-  x = Math.max(b.x, Math.min(x, b.x + b.width - 190))
-  let y = cursorY - 27
+  const roiLeft = cursorX - SCAN_REGION_WIDTH / 2
+  let x = roiLeft
+  if (x + SCAN_REGION_WIDTH > b.x + b.width) x = roiLeft - SCAN_REGION_WIDTH
+  x = Math.max(b.x, Math.min(x, b.x + b.width - 50))
+  let y = cursorY - SCAN_REGION_HEIGHT / 2
   y = Math.max(b.y, Math.min(y, b.y + b.height - 54))
   overlay.setPosition(Math.round(x), Math.round(y), false)
 }
@@ -122,10 +108,15 @@ async function scan(): Promise<void> {
   busy = true
   try {
     const cursor = screen.getCursorScreenPoint()
-    const left = Math.round(cursor.x - REGION / 2)
-    const top = Math.round(cursor.y - REGION / 2)
-    const rgba = await captureVirtualRegion(left, top, REGION, REGION)
-    const result = recognize(rgba, REGION, REGION)
+    const left = Math.round(cursor.x - SCAN_REGION_WIDTH / 2)
+    const top = Math.round(cursor.y - SCAN_REGION_HEIGHT / 2)
+    const rgba = await captureVirtualRegion({
+      x: left,
+      y: top,
+      w: SCAN_REGION_WIDTH,
+      h: SCAN_REGION_HEIGHT
+    })
+    const result = recognize(rgba, SCAN_REGION_WIDTH, SCAN_REGION_HEIGHT)
     lastRecognizedText = result.text
     if (result.text === lastText) stableCount++
     else {
@@ -156,17 +147,9 @@ function startLoop(): void {
   setInterval(scan, INTERVAL_MS)
 }
 
-function logOCR(text: string): void {
-  const logPath = path.join(app.getPath('userData'), 'ocr.log')
-
-  fs.appendFileSync(logPath, `[${new Date().toLocaleString()}] ${text}\n`, 'utf8')
-
-  console.log(logPath)
-  console.log(text)
-}
-
 app.whenReady().then(() => {
   createOverlay()
+
   globalShortcut.register('F8', () => {
     stopped = !stopped
     if (!stopped) scan()
@@ -175,10 +158,12 @@ app.whenReady().then(() => {
   globalShortcut.register('Control+1', () => {
     logOCR(lastRecognizedText || '(empty)')
   })
+
   startLoop()
 })
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
+
 app.on('window-all-closed', () => app.quit())

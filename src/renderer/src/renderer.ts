@@ -1,19 +1,17 @@
+import { renderMenu } from './components/menu/menu'
+
 function init(): void {
   window.addEventListener('DOMContentLoaded', () => {
-    console.log('[RENDERER] DOM loaded')
-    console.log('[RENDERER] window.api:', window.api)
-
     doAThing()
   })
 }
 
 function doAThing(): void {
+  renderMenu()
   const value: HTMLElement | null = document.getElementById('value')
   const meta: HTMLElement | null = document.getElementById('meta')
 
   window.api.onResult((data) => {
-    console.log('[RENDERER] OCR result:', data)
-
     if (value) {
       value.textContent = data.text
     }

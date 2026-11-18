@@ -1,16 +1,12 @@
 // import { electronAPI } from '@electron-toolkit/preload'
 import { contextBridge, ipcRenderer } from 'electron'
 
-console.log('[PRELOAD] Script started')
-console.log('[PRELOAD] contextIsolated:', process.contextIsolated)
-
 const api = {
   onResult: (callback: (data: { text: string; confidence: number; digits: number }) => void) => {
     const listener = (
       _event: Electron.IpcRendererEvent,
       data: { text: string; confidence: number; digits: number }
     ): void => {
-      console.log('[PRELOAD] Received OCR result:', data)
       callback(data)
     }
 
@@ -23,7 +19,6 @@ const api = {
 
   onError: (callback: (message: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, message: unknown): void => {
-      console.log('[PRELOAD] Received OCR error:', message)
       callback(message)
     }
 
