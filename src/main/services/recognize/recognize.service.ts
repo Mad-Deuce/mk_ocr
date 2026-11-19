@@ -1,6 +1,6 @@
 import { createCanvas } from '@napi-rs/canvas'
-import { FONT, GLYPH_H, GLYPH_W } from './config'
-import { Box, BoxWithPixels, Digit, RecognizeResult, Template } from './types'
+import { FONT, GLYPH_H, GLYPH_W } from '../../config'
+import { Box, BoxWithPixels, Digit, RecognizeResult, Template } from '../../types'
 
 const templates = renderTemplates()
 

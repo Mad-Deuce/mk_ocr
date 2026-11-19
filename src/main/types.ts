@@ -10,3 +10,5 @@ export type RecognizeResult = {
   count: number
   boxes: Digit[]
 }
+
+

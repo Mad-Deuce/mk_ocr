@@ -1,12 +1,9 @@
-// import { electronAPI } from '@electron-toolkit/preload'
 import { contextBridge, ipcRenderer } from 'electron'
+import { RecognizeResult } from '../main/types'
 
 const api = {
-  onResult: (callback: (data: { text: string; confidence: number; digits: number }) => void) => {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      data: { text: string; confidence: number; digits: number }
-    ): void => {
+  onResult: (callback: (data: RecognizeResult) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: RecognizeResult): void => {
       callback(data)
     }
 
@@ -27,21 +24,19 @@ const api = {
     return () => {
       ipcRenderer.removeListener('ocr-error', listener)
     }
+  },
+
+  onConfirm: (callback: (isConfirmed: boolean) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: boolean): void => {
+      callback(data)
+    }
+
+    ipcRenderer.on('ocr-result-confirm', listener)
+
+    return () => {
+      ipcRenderer.removeListener('ocr-result-confirm', listener)
+    }
   }
 }
 
 contextBridge.exposeInMainWorld('api', api)
-
-// if (process.contextIsolated) {
-//   try {
-//     contextBridge.exposeInMainWorld('electron', electronAPI)
-//     contextBridge.exposeInMainWorld('api', api)
-//   } catch (error) {
-//     console.error(error)
-//   }
-// } else {
-//   // @ts-ignore (define in dts)
-//   window.electron = electronAPI
-//   // @ts-ignore (define in dts)
-//   window.api = api
-// }

@@ -10,6 +10,7 @@ function doAThing(): void {
   renderMenu()
   const value: HTMLElement | null = document.getElementById('value')
   const meta: HTMLElement | null = document.getElementById('meta')
+  const menu: HTMLElement | null = document.getElementById('menu')
 
   window.api.onResult((data) => {
     if (value) {
@@ -30,6 +31,14 @@ function doAThing(): void {
 
     if (meta) {
       meta.textContent = String(message).slice(0, 48)
+    }
+  })
+
+  window.api.onConfirm((isConfirmed) => {
+    console.log(isConfirmed)
+
+    if (menu) {
+      menu.removeAttribute('hidden')
     }
   })
 }

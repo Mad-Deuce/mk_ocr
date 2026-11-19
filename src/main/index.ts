@@ -8,16 +8,19 @@ import {
   SCAN_REGION_HEIGHT,
   SCAN_REGION_WIDTH
 } from './config'
-import { logOCR } from './services/log/log.service'
 import { recognize } from './services/recognize/recognize.service'
-import type { Box } from './services/recognize/types'
+import type { Box, RecognizeResult } from './types'
 
 let overlay: BrowserWindow
+let isActivated = false
+let result: RecognizeResult
+let isResultConfirmed = false
+
 let busy = false
 let lastText = ''
 let stableCount = 0
-let stopped = false
-let lastRecognizedText = ''
+
+let intervalID: ReturnType<typeof setInterval>
 
 function createOverlay(): void {
   const preloadPath = path.join(__dirname, '../preload/index.js')
@@ -42,6 +45,7 @@ function createOverlay(): void {
       nodeIntegration: false
     }
   })
+
   overlay.webContents.on('preload-error', (_event, preloadPath, error) => {
     console.error('[PRELOAD ERROR]', preloadPath, error)
   })
@@ -94,17 +98,20 @@ async function captureVirtualRegion(box: Box): Promise<Buffer<ArrayBuffer>> {
 function placeOverlay(cursorX: number, cursorY: number): void {
   const display = screen.getDisplayNearestPoint({ x: cursorX, y: cursorY })
   const b = display.bounds
-  const roiLeft = cursorX - SCAN_REGION_WIDTH / 2
-  let x = roiLeft
-  if (x + SCAN_REGION_WIDTH > b.x + b.width) x = roiLeft - SCAN_REGION_WIDTH
-  x = Math.max(b.x, Math.min(x, b.x + b.width - 50))
+
+  let x = cursorX - SCAN_REGION_WIDTH / 2
+  if (x + SCAN_REGION_WIDTH > b.x + b.width) x = b.x + b.width - SCAN_REGION_WIDTH
+  if (x < b.x) x = b.x
+
   let y = cursorY - SCAN_REGION_HEIGHT / 2
-  y = Math.max(b.y, Math.min(y, b.y + b.height - 54))
+  if (y + SCAN_REGION_HEIGHT > b.y + b.height) y = b.y + b.height - SCAN_REGION_HEIGHT
+  if (y < b.y) y = b.y
+
   overlay.setPosition(Math.round(x), Math.round(y), false)
 }
 
 async function scan(): Promise<void> {
-  if (busy || stopped || !overlay || overlay.isDestroyed()) return
+  if (busy || !isActivated || !overlay || overlay.isDestroyed()) return
   busy = true
   try {
     const cursor = screen.getCursorScreenPoint()
@@ -116,8 +123,7 @@ async function scan(): Promise<void> {
       w: SCAN_REGION_WIDTH,
       h: SCAN_REGION_HEIGHT
     })
-    const result = recognize(rgba, SCAN_REGION_WIDTH, SCAN_REGION_HEIGHT)
-    lastRecognizedText = result.text
+    result = recognize(rgba, SCAN_REGION_WIDTH, SCAN_REGION_HEIGHT)
     if (result.text === lastText) stableCount++
     else {
       lastText = result.text
@@ -143,23 +149,40 @@ async function scan(): Promise<void> {
 }
 
 function startLoop(): void {
+  overlay.show()
   scan()
-  setInterval(scan, INTERVAL_MS)
+  intervalID = setInterval(scan, INTERVAL_MS)
+}
+
+function stopLoop(): void {
+  intervalID.close()
+  overlay.hide()
 }
 
 app.whenReady().then(() => {
   createOverlay()
+  overlay.hide()
 
-  globalShortcut.register('F8', () => {
-    stopped = !stopped
-    if (!stopped) scan()
+  globalShortcut.register('Control+Space', () => {
+    isActivated = !isActivated
+
+    if (isActivated) {
+      console.log('globalShortcut: Control+Space - activated')
+      startLoop()
+    } else {
+      console.log('globalShortcut: Control+Space - deactivated')
+      stopLoop()
+    }
   })
+
+  globalShortcut.register('Control+Shift+Space', () => {
+    if (isActivated) {
+      console.log('globalShortcut: Control+Shift+Space - scanned')
+      overlay.webContents.send('ocr-result-confirm', true)
+    }
+  })
+
   globalShortcut.register('Escape', () => app.quit())
-  globalShortcut.register('Control+1', () => {
-    logOCR(lastRecognizedText || '(empty)')
-  })
-
-  startLoop()
 })
 
 app.on('will-quit', () => {
