@@ -11,6 +11,11 @@ declare global {
       onError(callback: (message: unknown) => void): () => void
 
       onConfirm(callback: (isConfirmed: boolean) => void): () => void
+
+      getProperties: () => Promise<{
+        scanRegionHeight: number
+        scanRegionWidth: number
+      }>
     }
   }
 }

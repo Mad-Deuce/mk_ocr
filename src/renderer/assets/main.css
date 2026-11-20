@@ -8,22 +8,22 @@ html,
 body {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
+  width: min-content;
+  height: min-content;
   overflow: hidden;
   background: transparent;
   font-family: Arial, sans-serif;
 }
 
 .scan-region {
-  width: 50px;
-  height: 50px;
+  /* width: 50px; */
+  /* height: 50px; */
   background: rgba(20, 22, 26, 0.2);
 }
 
 .panel {
-  width: 200px;
-  height: 160px;
+  /* width: 200px; */
+  /* height: 160px; */
   padding: 5px 10px 4px;
   border-radius: 8px;
   color: #fff;

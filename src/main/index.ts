@@ -1,20 +1,18 @@
-import { app, BrowserWindow, globalShortcut, screen } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
 import { Monitor } from 'node-screenshots'
 import path from 'path'
-import {
-  INTERVAL_MS,
-  OVERLAY_HEIGHT,
-  OVERLAY_WIDTH,
-  SCAN_REGION_HEIGHT,
-  SCAN_REGION_WIDTH
-} from './config'
+import { INTERVAL_MS, SCAN_REGION_HEIGHT, SCAN_REGION_WIDTH } from './config'
 import { recognize } from './services/recognize/recognize.service'
 import type { Box, RecognizeResult } from './types'
+
+const properties = {
+  scanRegionHeight: SCAN_REGION_HEIGHT,
+  scanRegionWidth: SCAN_REGION_WIDTH
+}
 
 let overlay: BrowserWindow
 let isActivated = false
 let result: RecognizeResult
-let isResultConfirmed = false
 
 let busy = false
 let lastText = ''
@@ -26,12 +24,10 @@ function createOverlay(): void {
   const preloadPath = path.join(__dirname, '../preload/index.js')
 
   overlay = new BrowserWindow({
-    width: OVERLAY_WIDTH,
-    height: OVERLAY_HEIGHT,
     show: true,
     frame: false,
     transparent: true,
-    resizable: false,
+    resizable: true,
     movable: false,
     minimizable: false,
     maximizable: false,
@@ -149,14 +145,12 @@ async function scan(): Promise<void> {
 }
 
 function startLoop(): void {
-  overlay.show()
   scan()
   intervalID = setInterval(scan, INTERVAL_MS)
 }
 
 function stopLoop(): void {
   intervalID.close()
-  overlay.hide()
 }
 
 app.whenReady().then(() => {
@@ -168,16 +162,19 @@ app.whenReady().then(() => {
 
     if (isActivated) {
       console.log('globalShortcut: Control+Space - activated')
+      overlay.show()
       startLoop()
     } else {
       console.log('globalShortcut: Control+Space - deactivated')
       stopLoop()
+      overlay.hide()
     }
   })
 
   globalShortcut.register('Control+Shift+Space', () => {
     if (isActivated) {
       console.log('globalShortcut: Control+Shift+Space - scanned')
+      stopLoop()
       overlay.webContents.send('ocr-result-confirm', true)
     }
   })
@@ -190,3 +187,7 @@ app.on('will-quit', () => {
 })
 
 app.on('window-all-closed', () => app.quit())
+
+ipcMain.handle('get-properties', () => {
+  return properties
+})

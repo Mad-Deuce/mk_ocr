@@ -6,7 +6,16 @@ function init(): void {
   })
 }
 
-function doAThing(): void {
+async function doAThing(): Promise<void> {
+  const properties = await window.api.getProperties()
+  const scanRegion: HTMLElement | null = document.getElementById('scan-region')
+  if (scanRegion) {
+    scanRegion.style.width = properties.scanRegionWidth + 'px'
+    scanRegion.style.height = properties.scanRegionHeight + 'px'
+  }
+
+  // console.log(properties)
+
   renderMenu()
   const value: HTMLElement | null = document.getElementById('value')
   const meta: HTMLElement | null = document.getElementById('meta')

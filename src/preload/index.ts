@@ -36,7 +36,9 @@ const api = {
     return () => {
       ipcRenderer.removeListener('ocr-result-confirm', listener)
     }
-  }
+  },
+
+  getProperties: () => ipcRenderer.invoke('get-properties')
 }
 
 contextBridge.exposeInMainWorld('api', api)
