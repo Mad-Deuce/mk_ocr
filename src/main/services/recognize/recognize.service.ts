@@ -1,6 +1,6 @@
 import { createCanvas } from '@napi-rs/canvas'
 import { FONT, GLYPH_H, GLYPH_W } from '../../config'
-import { Box, BoxWithPixels, Digit, RecognizeResult, Template } from '../../types'
+import { Box, BoxWithPixels, Digit, RecognizeResult, Template } from '../../shared/types/types'
 
 const templates = renderTemplates()
 
@@ -117,13 +117,11 @@ function findComponents(mask: Uint8Array, width: number, height: number): BoxWit
 function resizeMask(
   mask: Uint8Array,
   sourceW: number,
-  sourceH: number,
+  _sourceH: number,
   box: Box,
   outW = GLYPH_W,
   outH = GLYPH_H
 ): Uint8Array {
-  console.log(sourceH)
-
   const out = new Uint8Array(outW * outH)
   // A small uniform inset prevents edge pixels from being clipped during normalization.
   const pad = 1

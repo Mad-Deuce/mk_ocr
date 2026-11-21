@@ -8,8 +8,9 @@ import {
   SCAN_REGION_HEIGHT,
   SCAN_REGION_WIDTH
 } from './config'
+import { ExcelService } from './services/excel/excel.service'
 import { recognize } from './services/recognize/recognize.service'
-import type { Box, RecognizeResult } from './types'
+import type { Box, RecognizeResult } from './shared/types/types'
 
 const properties = {
   SCAN_REGION_HEIGHT,
@@ -163,6 +164,13 @@ function stopLoop(): void {
 }
 
 app.whenReady().then(() => {
+  try {
+    const specificationWorksheet = ExcelService.getSpecificationWorksheet()
+    console.log(specificationWorksheet.Range('A1').value)
+  } catch (error) {
+    console.log(error)
+  }
+
   createOverlay()
   overlay.hide()
 

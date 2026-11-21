@@ -12,8 +12,9 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
-    "dev": "npm run build && electron-vite dev",
+    "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
+    "rebuild": "npx electron-rebuild -f -w winax",
     "postinstall": "install-electron && electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
@@ -24,7 +25,8 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@napi-rs/canvas": "^1.1.1",
-    "node-screenshots": "^0.2.8"
+    "node-screenshots": "^0.2.8",
+    "winax": "^3.6.10"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.1",

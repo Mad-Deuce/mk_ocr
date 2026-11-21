@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { RecognizeResult } from '../main/types'
+import { RecognizeResult } from '../main/shared/types/types'
 
 const api = {
   onResult: (callback: (data: RecognizeResult) => void) => {

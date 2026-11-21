@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import { RecognizeResult } from '../main/types'
+import { RecognizeResult } from '../main/shared/types/types'
 
 declare global {
   interface Window {
