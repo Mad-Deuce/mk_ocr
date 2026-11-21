@@ -1,17 +1,26 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
 import { Monitor } from 'node-screenshots'
 import path from 'path'
-import { INTERVAL_MS, SCAN_REGION_HEIGHT, SCAN_REGION_WIDTH } from './config'
+import {
+  FONT,
+  INTERVAL_MS,
+  RECOGNIZE_THRESHOLD,
+  SCAN_REGION_HEIGHT,
+  SCAN_REGION_WIDTH
+} from './config'
 import { recognize } from './services/recognize/recognize.service'
 import type { Box, RecognizeResult } from './types'
 
 const properties = {
-  scanRegionHeight: SCAN_REGION_HEIGHT,
-  scanRegionWidth: SCAN_REGION_WIDTH
+  SCAN_REGION_HEIGHT,
+  SCAN_REGION_WIDTH,
+  FONT,
+  RECOGNIZE_THRESHOLD
 }
 
 let overlay: BrowserWindow
 let isActivated = false
+let isConfirmed = false
 let result: RecognizeResult
 
 let busy = false
@@ -133,7 +142,7 @@ async function scan(): Promise<void> {
     overlay.webContents.send('ocr-result', {
       text: displayText,
       confidence: Math.round(result.confidence * 100),
-      digits: result.count,
+      count: result.count,
       threshold: result.threshold
     })
   } catch (error) {
@@ -159,24 +168,28 @@ app.whenReady().then(() => {
 
   globalShortcut.register('Control+Space', () => {
     isActivated = !isActivated
-
     if (isActivated) {
-      console.log('globalShortcut: Control+Space - activated')
       overlay.show()
       startLoop()
     } else {
-      console.log('globalShortcut: Control+Space - deactivated')
       stopLoop()
       overlay.hide()
     }
   })
 
   globalShortcut.register('Control+Shift+Space', () => {
-    if (isActivated) {
-      console.log('globalShortcut: Control+Shift+Space - scanned')
-      stopLoop()
-      overlay.webContents.send('ocr-result-confirm', true)
+    if (!isActivated) {
+      return
     }
+
+    isConfirmed = !isConfirmed
+    if (isConfirmed) {
+      stopLoop()
+    } else {
+      startLoop()
+    }
+
+    overlay.webContents.send('ocr-result-confirm', isConfirmed)
   })
 
   globalShortcut.register('Escape', () => app.quit())

@@ -8,7 +8,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  width: min-content;
+  width: fit-content;
   height: min-content;
   overflow: hidden;
   background: transparent;
@@ -16,14 +16,10 @@ body {
 }
 
 .scan-region {
-  /* width: 50px; */
-  /* height: 50px; */
   background: rgba(20, 22, 26, 0.2);
 }
 
 .panel {
-  /* width: 200px; */
-  /* height: 160px; */
   padding: 5px 10px 4px;
   border-radius: 8px;
   color: #fff;
@@ -45,6 +41,14 @@ body {
   line-height: 12px;
   color: #c9d0d8;
   white-space: nowrap;
+}
+.menu {
+  padding: 5px 10px 4px;
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(20, 22, 26, 0.91);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.28);
 }
 
 @media (max-width: 720px) {

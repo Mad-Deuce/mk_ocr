@@ -10,24 +10,33 @@ async function doAThing(): Promise<void> {
   const properties = await window.api.getProperties()
   const scanRegion: HTMLElement | null = document.getElementById('scan-region')
   if (scanRegion) {
-    scanRegion.style.width = properties.scanRegionWidth + 'px'
-    scanRegion.style.height = properties.scanRegionHeight + 'px'
+    scanRegion.style.width = properties.SCAN_REGION_WIDTH + 'px'
+    scanRegion.style.height = properties.SCAN_REGION_HEIGHT + 'px'
   }
 
-  // console.log(properties)
-
-  renderMenu()
   const value: HTMLElement | null = document.getElementById('value')
   const meta: HTMLElement | null = document.getElementById('meta')
-  const menu: HTMLElement | null = document.getElementById('menu')
 
   window.api.onResult((data) => {
-    if (value) {
-      value.textContent = data.text
+    if (!value || !meta) {
+      throw new Error('Renderer: value, meta render error')
     }
 
-    if (meta) {
-      meta.textContent = `Arial Bold 24 · ${data.confidence}% · ${data.digits} digit(s)`
+    value.textContent = data.text
+    meta.textContent = `${properties.FONT} · ${data.confidence}% · ${data.count} digit(s)`
+  })
+
+  renderMenu()
+  const menu: HTMLElement | null = document.getElementById('menu')
+  window.api.onConfirm((isConfirmed) => {
+    if (!menu) {
+      throw new Error('Renderer: menu render error')
+    }
+
+    if (isConfirmed) {
+      menu.removeAttribute('hidden')
+    } else {
+      menu.setAttribute('hidden', '')
     }
   })
 
@@ -40,14 +49,6 @@ async function doAThing(): Promise<void> {
 
     if (meta) {
       meta.textContent = String(message).slice(0, 48)
-    }
-  })
-
-  window.api.onConfirm((isConfirmed) => {
-    console.log(isConfirmed)
-
-    if (menu) {
-      menu.removeAttribute('hidden')
     }
   })
 }
