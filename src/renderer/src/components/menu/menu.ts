@@ -1,14 +1,39 @@
 export type MenuItem = {
   enabled: boolean
   label: string
+  action: (args?: unknown) => void
   subMenu?: MenuItem[]
 }
 
 export const menu: MenuItem[] = [
-  { enabled: true, label: 'Install/add a part' },
-  { enabled: true, label: 'Add a place' },
-  { enabled: true, label: 'Add a fastener' },
-  { enabled: true, label: 'Add a washer' }
+  {
+    enabled: true,
+    label: 'Install/add a part',
+    action: () => {
+      window.api.addPartHandler()
+    }
+  },
+  {
+    enabled: true,
+    label: 'Install/add a place',
+    action: () => {
+      window.api.addPlaceHandler()
+    }
+  },
+  {
+    enabled: true,
+    label: 'Install/add a fastener',
+    action: () => {
+      window.api.addFastenerHandler()
+    }
+  },
+  {
+    enabled: true,
+    label: 'Install/add a washer',
+    action: () => {
+      window.api.addWasherHandler()
+    }
+  }
 ]
 
 export const renderMenu = (): void => {
@@ -18,15 +43,14 @@ export const renderMenu = (): void => {
     return
   }
 
-  const newUl = document.createElement('ul')
-
   menu.forEach((item) => {
     if (item.enabled) {
       const newLi = document.createElement('li')
-      newLi.innerText = item.label
-      newUl.appendChild(newLi)
+      const newButton = document.createElement('button')
+      newButton.innerText = item.label
+      newButton.addEventListener('click', item.action)
+      newLi.appendChild(newButton)
+      menuElem.appendChild(newLi)
     }
   })
-
-  menuElem.appendChild(newUl)
 }

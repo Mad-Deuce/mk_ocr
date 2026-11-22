@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { RecognizeResult } from '../main/shared/types/types'
+import { RecognizeResult } from '../main/shared/types/recognize.types'
 
 const api = {
   onResult: (callback: (data: RecognizeResult) => void) => {
@@ -38,7 +38,12 @@ const api = {
     }
   },
 
-  getProperties: () => ipcRenderer.invoke('get-properties')
+  getProperties: () => ipcRenderer.invoke('get-properties'),
+
+  addPartHandler: () => ipcRenderer.invoke('add-part-handler'),
+  addPlaceHandler: () => ipcRenderer.invoke('add-place-handler'),
+  addFastenerHandler: () => ipcRenderer.invoke('add-fastener-handler'),
+  addWasherHandler: () => ipcRenderer.invoke('add-washer-handler')
 }
 
 contextBridge.exposeInMainWorld('api', api)

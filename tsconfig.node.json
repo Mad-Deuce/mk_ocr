@@ -5,7 +5,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/main/config.ts",
-    "src/main/shared/types/types.ts"
+    "src/main/shared/types/recognize.types.ts"
   ],
   "compilerOptions": {
     "composite": true,

@@ -18,6 +18,11 @@ declare global {
         RECOGNIZE_THRESHOLD: number
         FONT: string
       }>
+
+      addPartHandler: () => void
+      addPlaceHandler: () => void
+      addFastenerHandler: () => void
+      addWasherHandler: () => void
     }
   }
 }

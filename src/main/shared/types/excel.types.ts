@@ -12,5 +12,4 @@ export type Specification = {
   filePath: string
   sheetName: string
   values: SpecificationRecord[]
-} 
-
+}

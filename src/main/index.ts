@@ -11,7 +11,7 @@ import {
 import { ExcelService } from './services/excel/excel.service'
 import { recognize } from './services/recognize/recognize.service'
 import { SpecificationRecord } from './shared/types/excel.types'
-import type { Box, RecognizeResult } from './shared/types/types'
+import type { Box, RecognizeResult } from './shared/types/recognize.types'
 
 const properties = {
   SCAN_REGION_HEIGHT,
@@ -191,8 +191,10 @@ app.whenReady().then(() => {
 
     isConfirmed = !isConfirmed
     if (isConfirmed) {
+      overlay.setIgnoreMouseEvents(false)
       stopLoop()
     } else {
+      overlay.setIgnoreMouseEvents(true, { forward: true })
       startLoop()
     }
 
@@ -210,4 +212,21 @@ app.on('window-all-closed', () => app.quit())
 
 ipcMain.handle('get-properties', () => {
   return properties
+})
+
+ipcMain.handle('add-part-handler', async () => {
+  console.log('Called from renderer: add-part-handler')
+  return 'Result from main process'
+})
+ipcMain.handle('add-place-handler', async () => {
+  console.log('Called from renderer: add-place-handler')
+  return 'Result from main process'
+})
+ipcMain.handle('add-fastener-handler', async () => {
+  console.log('Called from renderer: add-fastener-handler')
+  return 'Result from main process'
+})
+ipcMain.handle('add-washer-handler', async () => {
+  console.log('Called from renderer: add-washer-handler')
+  return 'Result from main process'
 })
