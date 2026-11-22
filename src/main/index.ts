@@ -8,10 +8,12 @@ import {
   SCAN_REGION_WIDTH
 } from './config'
 import { ExcelService } from './services/excel/excel.service'
-import { recognize } from './services/recognize/recognize.service'
-import { Scanner } from './services/scan/scan.service'
+import { Recognizer } from './services/recognize/Recognizer.service'
+import { IRecognizer } from './services/recognize/Recognizer.types'
+import { Scanner } from './services/scan/Scanner.service'
 import { SpecificationRecord } from './shared/types/excel.types'
 import type { RecognizeResult } from './shared/types/recognize.types'
+import { IScanner } from './services/scan/Scanner.types'
 
 const properties = {
   SCAN_REGION_HEIGHT,
@@ -88,9 +90,11 @@ async function scan(): Promise<void> {
   busy = true
   try {
     const cursor = screen.getCursorScreenPoint()
-    const scanner = new Scanner()
+    const scanner: IScanner = new Scanner()
     const scanResult = await scanner.scan(cursor)
-    result = recognize(scanResult.rgba, scanResult.width, scanResult.height)
+
+    const recognizer: IRecognizer = new Recognizer()
+    result = recognizer.recognize(scanResult)
     if (result.text === lastText) stableCount++
     else {
       lastText = result.text

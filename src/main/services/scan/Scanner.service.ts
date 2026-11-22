@@ -1,17 +1,6 @@
 import { Monitor } from 'node-screenshots'
 import { SCAN_REGION_HEIGHT, SCAN_REGION_WIDTH } from '../../config'
-
-export type Cursor = { x: number; y: number }
-export type ScanResult = {
-  rgba: Buffer<ArrayBuffer>
-  width: number
-  height: number
-}
-type Box = { x: number; y: number; w: number; h: number }
-
-export interface IScanner {
-  scan(cursor: Cursor): Promise<ScanResult>
-}
+import { Box, Cursor, IScanner, ScanResult } from './Scanner.types'
 
 export class Scanner implements IScanner {
   public async scan(cursor: Cursor): Promise<ScanResult> {
