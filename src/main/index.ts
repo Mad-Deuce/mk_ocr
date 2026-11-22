@@ -10,6 +10,7 @@ import {
 } from './config'
 import { ExcelService } from './services/excel/excel.service'
 import { recognize } from './services/recognize/recognize.service'
+import { SpecificationRecord } from './shared/types/excel.types'
 import type { Box, RecognizeResult } from './shared/types/types'
 
 const properties = {
@@ -140,8 +141,11 @@ async function scan(): Promise<void> {
       stableCount >= 1 ? result.text || '—' : result.text ? `${result.text} ·` : '—'
     placeOverlay(cursor.x, cursor.y)
 
+    const specificationRecord: SpecificationRecord | undefined =
+      ExcelService.findRecordByPosition(displayText)
+
     overlay.webContents.send('ocr-result', {
-      text: displayText,
+      text: specificationRecord ? `${displayText}-${specificationRecord.name}` : displayText,
       confidence: Math.round(result.confidence * 100),
       count: result.count,
       threshold: result.threshold
@@ -164,12 +168,7 @@ function stopLoop(): void {
 }
 
 app.whenReady().then(() => {
-  try {
-    const specificationWorksheet = ExcelService.getSpecificationWorksheet()
-    console.log(specificationWorksheet.Range('A1').value)
-  } catch (error) {
-    console.log(error)
-  }
+  ExcelService.initExcelService()
 
   createOverlay()
   overlay.hide()
