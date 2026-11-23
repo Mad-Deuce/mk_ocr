@@ -14,6 +14,7 @@ export type ScanResult = {
 
 export type RecognizeResult = {
   text: string
+  displayText: string
   confidence: number
   threshold: number
   count: number

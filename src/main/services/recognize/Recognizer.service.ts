@@ -11,9 +11,13 @@ import {
 
 export class Recognizer {
   private templates: Map<string, Template>
+  private lastText: string
+  private stableCount: number
 
   constructor() {
     this.templates = this.renderTemplates()
+    this.lastText = ''
+    this.stableCount = 0
   }
 
   public recognize(scanResult: ScanResult): RecognizeResult {
@@ -42,7 +46,17 @@ export class Recognizer {
       ? digits.reduce((sum, d) => sum + d.score, 0) / digits.length
       : 0
 
-    return { text, confidence, threshold, count: digits.length, boxes: digits }
+    if (text === this.lastText) this.stableCount = this.stableCount + 1
+    else {
+      this.lastText = text
+      this.stableCount = 0
+    }
+
+
+    // Require two consecutive identical readings to suppress transient noise.
+    const displayText = this.stableCount >= 1 ? text || '—' : text ? `${text} ·` : '—'
+
+    return { text, displayText, confidence, threshold, count: digits.length, boxes: digits }
   }
 
   private otsuThreshold(gray: Uint8Array): number {

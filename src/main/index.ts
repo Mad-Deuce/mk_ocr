@@ -9,11 +9,10 @@ import {
 import { ExcelService } from './services/excel/excel.service'
 import { Overlay } from './services/overlay/Overlay.service'
 import { Recognizer } from './services/recognize/Recognizer.service'
-import { IRecognizer } from './services/recognize/Recognizer.types'
+import { IRecognizer, RecognizeResult } from './services/recognize/Recognizer.types'
 import { Scanner } from './services/scan/Scanner.service'
 import { IScanner } from './services/scan/Scanner.types'
 import { SpecificationRecord } from './shared/types/excel.types'
-import type { RecognizeResult } from './shared/types/recognize.types'
 
 const properties = {
   SCAN_REGION_HEIGHT,
@@ -21,15 +20,15 @@ const properties = {
   FONT,
   RECOGNIZE_THRESHOLD
 }
+const recognizer: IRecognizer = new Recognizer()
+const scanner: IScanner = new Scanner()
 
 let overlay: Overlay
 let isActivated = false
 let isConfirmed = false
-let result: RecognizeResult
+let recognizeResult: RecognizeResult
 
 let busy = false
-let lastText = ''
-let stableCount = 0
 
 let intervalID: ReturnType<typeof setInterval>
 
@@ -38,29 +37,23 @@ async function main(): Promise<void> {
   busy = true
   try {
     const cursor = screen.getCursorScreenPoint()
-    const scanner: IScanner = new Scanner()
     const scanResult = await scanner.scan(cursor)
 
-    const recognizer: IRecognizer = new Recognizer()
-    result = recognizer.recognize(scanResult)
-    if (result.text === lastText) stableCount++
-    else {
-      lastText = result.text
-      stableCount = 0
-    }
-    // Require two consecutive identical readings to suppress transient noise.
-    const displayText =
-      stableCount >= 1 ? result.text || '—' : result.text ? `${result.text} ·` : '—'
+    recognizeResult = recognizer.recognize(scanResult)
+
     overlay.placeOverlay(cursor.x, cursor.y)
 
-    const specificationRecord: SpecificationRecord | undefined =
-      ExcelService.findRecordByPosition(displayText)
+    const specificationRecord: SpecificationRecord | undefined = ExcelService.findRecordByPosition(
+      recognizeResult.text
+    )
 
     overlay.sendResult({
-      text: specificationRecord ? `${displayText}-${specificationRecord.name}` : displayText,
-      confidence: Math.round(result.confidence * 100),
-      count: result.count,
-      threshold: result.threshold
+      text: specificationRecord
+        ? `${recognizeResult.displayText}-${specificationRecord.name}`
+        : recognizeResult.displayText,
+      confidence: Math.round(recognizeResult.confidence * 100),
+      count: recognizeResult.count,
+      threshold: recognizeResult.threshold
     })
   } catch (error) {
     overlay.sendError(error)
