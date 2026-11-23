@@ -1,5 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
-import path from 'path'
+import { app, globalShortcut, ipcMain, screen } from 'electron'
 import {
   FONT,
   INTERVAL_MS,
@@ -8,12 +7,13 @@ import {
   SCAN_REGION_WIDTH
 } from './config'
 import { ExcelService } from './services/excel/excel.service'
+import { Overlay } from './services/overlay/Overlay.service'
 import { Recognizer } from './services/recognize/Recognizer.service'
 import { IRecognizer } from './services/recognize/Recognizer.types'
 import { Scanner } from './services/scan/Scanner.service'
+import { IScanner } from './services/scan/Scanner.types'
 import { SpecificationRecord } from './shared/types/excel.types'
 import type { RecognizeResult } from './shared/types/recognize.types'
-import { IScanner } from './services/scan/Scanner.types'
 
 const properties = {
   SCAN_REGION_HEIGHT,
@@ -22,7 +22,7 @@ const properties = {
   RECOGNIZE_THRESHOLD
 }
 
-let overlay: BrowserWindow
+let overlay: Overlay
 let isActivated = false
 let isConfirmed = false
 let result: RecognizeResult
@@ -33,60 +33,8 @@ let stableCount = 0
 
 let intervalID: ReturnType<typeof setInterval>
 
-function createOverlay(): void {
-  const preloadPath = path.join(__dirname, '../preload/index.js')
-
-  overlay = new BrowserWindow({
-    show: true,
-    frame: false,
-    transparent: true,
-    resizable: true,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    hasShadow: false,
-    focusable: false,
-    webPreferences: {
-      preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  })
-
-  overlay.webContents.on('preload-error', (_event, preloadPath, error) => {
-    console.error('[PRELOAD ERROR]', preloadPath, error)
-  })
-
-  overlay.webContents.on('did-finish-load', () => {
-    console.log('[OVERLAY] Renderer loaded')
-  })
-
-  overlay.webContents.openDevTools({ mode: 'detach' })
-  overlay.setAlwaysOnTop(true, 'screen-saver')
-  overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  overlay.setIgnoreMouseEvents(true, { forward: true })
-  overlay.loadFile(path.join(__dirname, '../renderer/index.html'))
-}
-
-function placeOverlay(cursorX: number, cursorY: number): void {
-  const display = screen.getDisplayNearestPoint({ x: cursorX, y: cursorY })
-  const b = display.bounds
-
-  let x = cursorX - SCAN_REGION_WIDTH / 2
-  if (x + SCAN_REGION_WIDTH > b.x + b.width) x = b.x + b.width - SCAN_REGION_WIDTH
-  if (x < b.x) x = b.x
-
-  let y = cursorY - SCAN_REGION_HEIGHT / 2
-  if (y + SCAN_REGION_HEIGHT > b.y + b.height) y = b.y + b.height - SCAN_REGION_HEIGHT
-  if (y < b.y) y = b.y
-
-  overlay.setPosition(Math.round(x), Math.round(y), false)
-}
-
-async function scan(): Promise<void> {
-  if (busy || !isActivated || !overlay || overlay.isDestroyed()) return
+async function main(): Promise<void> {
+  if (busy || !isActivated || !overlay || overlay.getInstance().isDestroyed()) return
   busy = true
   try {
     const cursor = screen.getCursorScreenPoint()
@@ -103,35 +51,27 @@ async function scan(): Promise<void> {
     // Require two consecutive identical readings to suppress transient noise.
     const displayText =
       stableCount >= 1 ? result.text || '—' : result.text ? `${result.text} ·` : '—'
-    placeOverlay(cursor.x, cursor.y)
+    overlay.placeOverlay(cursor.x, cursor.y)
 
     const specificationRecord: SpecificationRecord | undefined =
       ExcelService.findRecordByPosition(displayText)
 
-    sendResult({
+    overlay.sendResult({
       text: specificationRecord ? `${displayText}-${specificationRecord.name}` : displayText,
       confidence: Math.round(result.confidence * 100),
       count: result.count,
       threshold: result.threshold
-    } as RecognizeResult)
+    })
   } catch (error) {
-    sendError(error)
+    overlay.sendError(error)
   } finally {
     busy = false
   }
 }
 
-export function sendResult(result: RecognizeResult): void {
-  overlay.webContents.send('ocr-result', result)
-}
-export function sendError(error: unknown): void {
-  if (overlay && !overlay.isDestroyed())
-    overlay.webContents.send('ocr-error', error instanceof Error ? error.message : String(error))
-}
-
 function startLoop(): void {
-  scan()
-  intervalID = setInterval(scan, INTERVAL_MS)
+  main()
+  intervalID = setInterval(main, INTERVAL_MS)
 }
 
 function stopLoop(): void {
@@ -141,17 +81,21 @@ function stopLoop(): void {
 app.whenReady().then(() => {
   ExcelService.initExcelService()
 
-  createOverlay()
-  overlay.hide()
+  overlay = new Overlay()
+  overlay.getInstance().hide()
 
+  registerGlobalShortcut()
+})
+
+function registerGlobalShortcut(): void {
   globalShortcut.register('Control+Space', () => {
     isActivated = !isActivated
     if (isActivated) {
-      overlay.show()
+      overlay.getInstance().show()
       startLoop()
     } else {
       stopLoop()
-      overlay.hide()
+      overlay.getInstance().hide()
     }
   })
 
@@ -162,18 +106,18 @@ app.whenReady().then(() => {
 
     isConfirmed = !isConfirmed
     if (isConfirmed) {
-      overlay.setIgnoreMouseEvents(false)
+      overlay.getInstance().setIgnoreMouseEvents(false)
       stopLoop()
     } else {
-      overlay.setIgnoreMouseEvents(true, { forward: true })
+      overlay.getInstance().setIgnoreMouseEvents(true, { forward: true })
       startLoop()
     }
 
-    overlay.webContents.send('ocr-result-confirm', isConfirmed)
+    overlay.sendResultConfirm(isConfirmed)
   })
 
   globalShortcut.register('Escape', () => app.quit())
-})
+}
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
