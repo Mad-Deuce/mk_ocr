@@ -7,7 +7,7 @@ import {
   SCAN_REGION_WIDTH
 } from './config'
 import { ExcelService } from './services/excel/excel.service'
-import { Overlay } from './services/overlay/Overlay.service'
+import { IOverlay, Overlay } from './services/overlay/Overlay.service'
 import { Recognizer } from './services/recognize/Recognizer.service'
 import { IRecognizer, RecognizeResult } from './services/recognize/Recognizer.types'
 import { Scanner } from './services/scan/Scanner.service'
@@ -22,8 +22,9 @@ const properties = {
 }
 const recognizer: IRecognizer = new Recognizer()
 const scanner: IScanner = new Scanner()
+ExcelService.initExcelService()
 
-let overlay: Overlay
+let overlay: IOverlay
 let isActivated = false
 let isConfirmed = false
 let recognizeResult: RecognizeResult
@@ -31,6 +32,13 @@ let recognizeResult: RecognizeResult
 let busy = false
 
 let intervalID: ReturnType<typeof setInterval>
+
+app.whenReady().then(() => {
+  overlay = new Overlay()
+  overlay.getInstance().hide()
+
+  registerGlobalShortcut()
+})
 
 async function main(): Promise<void> {
   if (busy || !isActivated || !overlay || overlay.getInstance().isDestroyed()) return
@@ -70,15 +78,6 @@ function startLoop(): void {
 function stopLoop(): void {
   intervalID.close()
 }
-
-app.whenReady().then(() => {
-  ExcelService.initExcelService()
-
-  overlay = new Overlay()
-  overlay.getInstance().hide()
-
-  registerGlobalShortcut()
-})
 
 function registerGlobalShortcut(): void {
   globalShortcut.register('Control+Space', () => {

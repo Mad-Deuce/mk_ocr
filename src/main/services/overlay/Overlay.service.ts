@@ -9,7 +9,15 @@ const Event = {
   ocrError: 'ocr-error'
 }
 
-export class Overlay {
+export interface IOverlay {
+  getInstance(): BrowserWindow
+  sendResult(result: unknown): void
+  sendResultConfirm(isConfirmed: boolean): void
+  sendError(error: unknown): void
+  placeOverlay(cursorX: number, cursorY: number): void
+}
+
+export class Overlay implements IOverlay {
   private instance: BrowserWindow
 
   constructor() {
