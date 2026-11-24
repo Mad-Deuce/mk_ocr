@@ -35,7 +35,7 @@ export class Overlay implements IOverlay {
       skipTaskbar: true,
       alwaysOnTop: true,
       hasShadow: false,
-      focusable: false,
+      focusable: true,
       webPreferences: {
         preload: preloadPath,
         contextIsolation: true,

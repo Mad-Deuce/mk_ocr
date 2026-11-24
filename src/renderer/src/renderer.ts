@@ -1,4 +1,5 @@
 import { renderMenu } from './components/menu/menu'
+// import { renderSelector } from './components/template-selector/template-selector'
 
 function init(): void {
   window.addEventListener('DOMContentLoaded', () => {
@@ -39,6 +40,9 @@ async function doAThing(): Promise<void> {
       menu.setAttribute('hidden', '')
     }
   })
+
+  // renderSelector()
+  // const templateSelector: HTMLElement | null = document.getElementById('template-selector')
 
   window.api.onError((message) => {
     console.error('[RENDERER] OCR error:', message)

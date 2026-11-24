@@ -9,7 +9,7 @@ body {
   margin: 0;
   padding: 0;
   width: fit-content;
-  height: min-content;
+  height: fit-content;
   overflow: hidden;
   background: transparent;
   font-family: Arial, sans-serif;
@@ -19,7 +19,7 @@ body {
   background: rgba(20, 22, 26, 0.2);
 }
 
-.panel {
+.wrapper {
   padding: 5px 10px 4px;
   border-radius: 8px;
   color: #fff;
